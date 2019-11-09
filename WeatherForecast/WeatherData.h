@@ -12,16 +12,20 @@
 #include <ctime>
 #include <chrono>
 #include <ratio>
+//#include <boost/date_time/posix_time/posix_time.hpp>
 #include <vector>
 #include <algorithm>
+//#include <boost/regex.hpp>
 
 class WeatherData {
 public:
-
-	static int extractData();
-	static float getAvg(std::vector<float> vector);
-	static void simpleWeatherForecast(std::vector<float> vector);
-
+	WeatherData();
+	std::string _db_name;
+	int extractData();
+	float getAvg(std::vector<float> vector);
+	void simpleWeatherForecast(std::vector<float> vector);
+	void ShowStats();
 private:
-	static int nbHoursElapsedToday();
+	std::vector<float> _arrTemp, _arrPress, _arrRain;
+	int nbHoursElapsedToday();
 };

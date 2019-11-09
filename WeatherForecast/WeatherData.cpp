@@ -1,7 +1,25 @@
 #include "stdafx.h"
 //https://stackoverflow.com/questions/4726155/what-is-stdafx-h-used-for-in-visual-studio/4726838#4726838
 #include "WeatherData.h"
+#include "DataStorage.h"
+#include "GetWebData.hpp"
 
+WeatherData::WeatherData() {
+	std::cout << "Weather Data Constructor" << std::endl;
+	//Check if data is available
+	//Donwload data
+	GetWebData::downloadHTML();
+	//extractData
+	WeatherData::extractData();
+	ShowStats();
+	//Build the DB
+	//DataStorage::storeToDB(_arrTemp,_arrPress, _arrRain);
+	DataStorage st = DataStorage();
+	st.storeToDB(_arrTemp, _arrPress, _arrRain);
+	//Query the DB
+	st.showStatistics();
+	//st.SelectThisYear();
+}
 
 float WeatherData::getAvg(std::vector<float> vector) {
 	float res = 0;
@@ -40,6 +58,15 @@ void WeatherData::simpleWeatherForecast(std::vector<float> pressures) {
 	}
 }
 
+void WeatherData::ShowStats() {
+	//Get the statistics:
+	std::cout << "The average barometric pressure today is:" << getAvg(_arrPress) << '\n';
+	std::cout << "The average temperature today is:" << getAvg(_arrTemp) << '\n';
+	std::cout << "The average rain rate today is:" << getAvg(_arrRain) << '\n';
+	std::cout << '\n';
+	simpleWeatherForecast(_arrPress);
+}
+
 int WeatherData::extractData() {
 	std::ifstream fp("downloaded.html");
 	std::string strToFind = "<H1><center> Tableau d'observations pour <br>";
@@ -67,7 +94,8 @@ int WeatherData::extractData() {
 	//printf("The line str = %s", str);
 	//std::cout << str << std::endl;
 	std::smatch m,m2,m3;
-	std::vector<float> arrTemp, arrRain, arrPress;
+
+	//std::vector<float> arrTemp, arrRain, arrPress;
 	for (int i = 0; i < nb_mm ; i++) {
 		std::regex_search(str, m, rgxTemp);
 		if (m.size() > 0) {
@@ -75,7 +103,7 @@ int WeatherData::extractData() {
 			std::string v = first.substr(0, first.find(" °C"));
 			try {
 				float val = stof(v);
-				arrTemp.push_back(val);
+				_arrTemp.push_back(val);
 			}
 			catch (int e) {
 				std::cout << "Cannot convert to float" << std::endl;
@@ -93,7 +121,7 @@ int WeatherData::extractData() {
 			std::string v2 = first2.substr(0, first2.find(" hPa"));
 			try {
 				float val2 = stof(v2); 
-				arrPress.push_back(val2);
+				_arrPress.push_back(val2);
 			}
 			catch (int e) {
 				std::cout << "Cannot convert to number" << std::endl;
@@ -111,7 +139,7 @@ int WeatherData::extractData() {
 			std::string v3 = first3.substr(0, first3.find(" mm/h"));
 			try {
 				float val3 = stof(v3); 
-				arrRain.push_back(val3);
+				_arrRain.push_back(val3);
 			}
 			catch (int e) {
 				std::cout << "Cannot convert to float" << std::endl;
@@ -146,12 +174,6 @@ int WeatherData::extractData() {
 	//}
 	//std::cout << "\n" << std::endl;
 
-	//Get the statistics:
-	std::cout << "The average barometric pressure today is:" << getAvg(arrPress) << '\n';
-	std::cout << "The average temperature today is:" << getAvg(arrTemp) << '\n';
-	std::cout << "The average rain rate today is:" << getAvg(arrRain) << '\n\n';
-	simpleWeatherForecast(arrPress);
-
 	return 0;
 }
 
@@ -172,6 +194,11 @@ int WeatherData::nbHoursElapsedToday(){
 	//Add 1 because it is french weather and Paris is UTC + 1
 	return hours+1;
 }
+
+
+
+
+
 
 
 
