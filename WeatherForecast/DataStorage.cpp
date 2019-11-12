@@ -5,12 +5,12 @@ DataStorage::DataStorage() {
 }
 
 
-bool FileExists(const std::string &Filename)
+bool DataStorage::FileExists(const std::string &Filename)
 {
 	return access(Filename.c_str(), 0) == 0;
 }
 
-std::string giveDate() {
+std::string DataStorage::giveTodayDate() {
 	tm *tptr;
 	std::time_t t = std::time(nullptr);
 	tptr = std::gmtime(&t);
@@ -34,22 +34,16 @@ int DataStorage::getTable() {
 	int ret;
 	sqlite3 *db;
 	ret = sqlite3_open(_db_name, &db);
-
 	if (ret) {
-		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+		//fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
 		return(0);
-	}
-	else {
-		fprintf(stderr, "Opened database successfully\n");
 	}
 	ret = sqlite3_get_table(db, sql.c_str(), &paszResults, &nRows, &nCols, &szError);
 	if (ret != SQLITE_OK) {
-		std::cout << "Cannot get the table weather" << std::endl;
+		//std::cerr << "Cannot get the table weather" << std::endl;
 	}
 	return ret;
 }
-
-
 
 int DataStorage::storeToDB(std::vector<float> temperatures, std::vector<float> pressions, std::vector<float> rainrates) {
 	int error = 0;
@@ -61,7 +55,6 @@ int DataStorage::storeToDB(std::vector<float> temperatures, std::vector<float> p
 	if (getTable() != SQLITE_OK) {
 		error = DataStorage::CreateTable();
 	}
-
 	//Iteration over the vectors content to add them to DB
 	//All vectors should be the same size but let's take the min
 	int m = std::min(std::min(temperatures.size(), rainrates.size()), pressions.size());
@@ -69,25 +62,23 @@ int DataStorage::storeToDB(std::vector<float> temperatures, std::vector<float> p
 		for (int i = 0; i < temperatures.size();i++) {
 			std::ostringstream hour;
 			hour  << std::setw(2) << std::setfill('0') << i;
-			std::string timestamp = giveDate()+" "+hour.str()+"-00-00";
+			std::string timestamp = giveTodayDate()+" "+hour.str()+"-00-00";
 			AddEntry(timestamp, temperatures[i], pressions[i], rainrates[i] );
 		}
 	}
 	catch (int e) {
-		std::cout << "Cannot store to database" << std::endl;
-		std::cout << "An exception occurred. Exception Nr. " << e << '\n';
+		//std::cerr << "Cannot store to database" << std::endl;
+		//std::cerr << "An exception occurred. Exception Nr. " << e << '\n';
 	}
-
-
 	return error;
 }
 
 int DataStorage::callback(void *NotUsed, int argc, char **argv, char **azColName) {
 	int i;
 	for (i = 0; i<argc; i++) {
-		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+		//fprintf(stderr, "%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
 	}
-	printf("\n");
+	//fprintf(stderr, "\n");
 	return 0;
 }
 
@@ -97,38 +88,27 @@ int DataStorage::CreateTable() {
 	int rc;
 	std::string sql;
 	int error = 0;
-
 	// Open database 
 	rc = sqlite3_open(_db_name, &db);
 
 	if (rc) {
-		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+		//fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
 		return(-1);
 	}
-	else {
-		fprintf(stdout, "Opened database successfully\n");
-	}
-
 	// Create SQL statement 
 	sql = "CREATE TABLE WEATHER("  \
 		"TIMESTAMP           DATETIME    NOT NULL," \
 		"TEMPERATURE           REAL    NOT NULL," \
 		"PRESSURE            REAL     NOT NULL," \
 		"RAIN         REAL );";
-
 	//std::cout << "SQL query is:" << sql << '\n';
 	// Execute SQL statement 
 	rc = sqlite3_exec(db, sql.c_str(), 0, 0, &zErrMsg);
-
 	if (rc != SQLITE_OK) {
-		fprintf(stderr, "SQL error: %s\n", zErrMsg);
+		//fprintf(stderr, "SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
 		error = -1;
 	}
-	else {
-		fprintf(stdout, "Table created successfully\n");
-	}
-
 	sqlite3_close(db);
 	return error;
 }
@@ -140,32 +120,21 @@ int DataStorage::AddEntry(std::string td, std::string temp, std::string press, s
 	int rc;
 	std::string sql;
 	int error = 0;
-
 	// Open database 
 	rc = sqlite3_open(_db_name, &db);
-
 	if (rc) {
-		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+		//fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
 		return(-1);
 	}
-	else {
-		fprintf(stdout, "Opened database successfully\n");
-	}
-
 	// Create SQL statement
 	sql = "INSERT INTO WEATHER (TIMESTAMP,TEMPERATURE,PRESSURE,RAIN) " \
 		"VALUES ('"+ td+ "',"+ temp +  "," + press + "," + rain + " ); ";
 	//std::cout << "SQL query is:" << sql << '\n';
-
 	// Execute SQL statement 
 	rc = sqlite3_exec(db, sql.c_str(), 0, 0, &zErrMsg);
-
 	if (rc != SQLITE_OK) {
-		fprintf(stderr, "SQL error: %s\n", zErrMsg);
+		//fprintf(stderr, "SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
-	}
-	else {
-		fprintf(stdout, "Records created successfully\n");
 	}
 	sqlite3_close(db);
 	return error;
@@ -186,13 +155,13 @@ int DataStorage::SelectThisYear()
 		// initialize engine
 		if (SQLITE_OK != (ret = sqlite3_initialize()))
 		{
-			printf("Failed to initialize library: %d\n", ret);
+			//fprintf(stderr, "Failed to initialize library: %d\n", ret);
 			break;
 		}
 		// open connection to a DB
 		if (SQLITE_OK != (ret = sqlite3_open_v2(_db_name, &pDb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL)))
 		{
-			printf("Failed to open conn: %d\n", ret);
+			//fprintf(stderr, "Failed to open conn: %d\n", ret);
 			break;
 		}
 		// prepare the statement
@@ -200,17 +169,17 @@ int DataStorage::SelectThisYear()
 		//if (SQLITE_OK != (ret = sqlite3_prepare_v2(pDb, "SELECT * FROM WEATHER WHERE YEAR(TIMESTAMP) = YEAR(GETDATE())", -1, &query, NULL)))
 		if (SQLITE_OK != (ret = sqlite3_prepare_v2(pDb, "SELECT * FROM WEATHER WHERE YEAR(TIMESTAMP) = YEAR(DATETIME('now'))", -1, &query, NULL)))
 		{
-			printf("Failed to prepare insert: %d, %s\n", ret, sqlite3_errmsg(pDb));
+			//fprintf(stderr, "Failed to prepare insert: %d, %s\n", ret, sqlite3_errmsg(pDb));
 			break;
 		}
 		// step to 1st row of data
 		if (SQLITE_ROW != (ret = sqlite3_step(query))) 
 		{
-			printf("Failed to step: %d, %s\n", ret, sqlite3_errmsg(pDb));
+			//fprintf(stderr, "Failed to step: %d, %s\n", ret, sqlite3_errmsg(pDb));
 			break;
 		}
 		// ... and print the value of column 0 (expect 2012 here)
-		printf("Value from sqlite: %s", sqlite3_column_text(query, 0));
+		//printf("Value from sqlite: %s", sqlite3_column_text(query, 0));
 
 	} while (false);
 	// cleanup
@@ -228,7 +197,7 @@ float DataStorage::getAvg(std::string type, std::string date)
 	string sql = "SELECT AVG(" + type + ") FROM WEATHER";
 	//string sql = "SELECT AVG(" + type + ") FROM WEATHER WHERE TIMESTAMP LIKE " + date_like;
 	//string sql = "SELECT AVG("+type+") FROM WEATHER WHERE TRUNK(TIMESTAMP) = TO_DATE('"+date+"','YYYY-MM-DD')";
-	cout << "SQL query is:" << sql << '\n';
+	//cout << "SQL query is:" << sql << '\n';
 	sqlite3* pDb = NULL;
 	sqlite3_stmt* query = NULL;
 	float ret = 0;
@@ -237,36 +206,32 @@ float DataStorage::getAvg(std::string type, std::string date)
 		// initialize engine
 		if (SQLITE_OK != (ret = sqlite3_initialize()))
 		{
-			printf("Failed to initialize library: %d\n", ret);
+			//fprintf(stderr, "Failed to initialize library: %d\n", ret);
 			break;
 		}
 		// open connection to a DB
 		if (SQLITE_OK != (ret = sqlite3_open_v2(_db_name, &pDb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL)))
 		{
-			printf("Failed to open conn: %d\n", ret);
+			//fprintf(stderr, "Failed to open conn: %d\n", ret);
 			break;
 		}
 		// prepare the statement
 		if (SQLITE_OK != (ret = sqlite3_prepare_v2(pDb, sql.c_str(), -1, &query, NULL)))
 		{
-			printf("Failed to prepare insert: %d, %s\n", ret, sqlite3_errmsg(pDb));
+			//fprintf(stderr, "Failed to prepare insert: %d, %s\n", ret, sqlite3_errmsg(pDb));
 			break;
 		}
 		// step to 1st row of data
 		if (SQLITE_ROW != (ret = sqlite3_step(query))) // see documentation, this can return more values as success
 		{
-			printf("Failed to step: %d, %s\n", ret, sqlite3_errmsg(pDb));
+			//fprintf(stderr, "Failed to step: %d, %s\n", ret, sqlite3_errmsg(pDb));
 			break;
 		}
 		// ... and print the value of column 0 (expect 2012 here)
-		printf("Value from sqlite: %s", sqlite3_column_text(query, 0));
+		//printf("Value from sqlite: %s", sqlite3_column_text(query, 0));
 	} while (false);
 	const unsigned char * res = sqlite3_column_text(query, 0);
-	//string retn(res);
-	//string retn(reinterpret_cast<char*>(res));
 	string retn((char*)res);
-	//string retn;
-	//retn = string(res);
 	ret = stof(retn);
 	// cleanup
 	if (NULL != query) sqlite3_finalize(query);
@@ -289,21 +254,21 @@ float DataStorage::getAvgPressure(std::string date) {
 
 float DataStorage::getAvgTemperatureToday()
 {
-	return getAvgTemperature(giveDate());
+	return getAvgTemperature(giveTodayDate());
 }
 
 float DataStorage::getAvgRainRateToday()
 {
-	return getAvgRainRate(giveDate());
+	return getAvgRainRate(giveTodayDate());
 }
 
 float DataStorage::getAvgPressureToday()
 {
-	return getAvgPressure(giveDate());
+	return getAvgPressure(giveTodayDate());
 }
 
 void DataStorage::showStatistics() {
-	std::cout << "The average temperature today is:" << getAvgTemperatureToday() << '\n';
-	std::cout << "The average barometric pressure today is:" << getAvgPressureToday() << '\n';
-	std::cout << "The average rain rate today is:" << getAvgRainRateToday() << '\n\n';
+	//std::cout << "The average temperature today is:" << getAvgTemperatureToday() << '\n';
+	//std::cout << "The average barometric pressure today is:" << getAvgPressureToday() << '\n';
+	//std::cout << "The average rain rate today is:" << getAvgRainRateToday() << "\n\n";
 }

@@ -1,11 +1,39 @@
 #include "stdafx.h"
 //https://stackoverflow.com/questions/4726155/what-is-stdafx-h-used-for-in-visual-studio/4726838#4726838
 #include "WeatherData.h"
-#include "DataStorage.h"
-#include "GetWebData.hpp"
+
 
 WeatherData::WeatherData() {
-	std::cout << "Weather Data Constructor" << std::endl;
+	initialiseData();
+}
+
+WeatherData::WeatherData(std::string date) {
+	DataStorage st = initialiseData();
+	if (!date.empty()) {
+		makeJSONArchive(date, st.getAvgTemperature(date), st.getAvgPressure(date), st.getAvgRainRate(date));
+	}
+	else {
+		//std::cerr << "Date wasn't read properly" << '\n';
+	}
+		
+}
+
+DataStorage WeatherData::initialiseData() {
+	_JSON_FORMAT_TODAY =
+		"{ \"%s\": \n  {\n"
+		"    \"temperatureavg\": %lf,\n"
+		"    \"barometricpressureavg\": %lf,\n"
+		"    \"rainrateavg\": %lf,\n"
+		"    \"forecast\": %s\n"
+		"  } \n}\n"
+		;
+	_JSON_FORMAT_ARCHIVE =
+		"{ \"%s\": \n  {\n"
+		"    \"temperatureAvg\": %lf,\n"
+		"    \"barometricPressureAvg\": %lf,\n"
+		"    \"rainRateAvg\": %lf\n"
+		"  } \n}\n"
+		;
 	//Check if data is available
 	//Donwload data
 	GetWebData::downloadHTML();
@@ -17,8 +45,44 @@ WeatherData::WeatherData() {
 	DataStorage st = DataStorage();
 	st.storeToDB(_arrTemp, _arrPress, _arrRain);
 	//Query the DB
-	st.showStatistics();
+	//st.showStatistics();
 	//st.SelectThisYear();
+	return st;
+}
+
+//https://www.tutorialspoint.com/c_standard_library/c_function_vsprintf.htm
+int WeatherData::newfmt(char** str, const char *format, ...) {
+	va_list aptr;
+	int ret;
+	va_start(aptr, format);
+	int len = _vscprintf(format, aptr) + 1;
+	*str = (char *)malloc(len * sizeof(char));
+	if (!*str) return 0;
+	ret = vsprintf_s(*str, len, format, aptr);
+	va_end(aptr);
+	return(ret);
+}
+
+//For today data
+void WeatherData::makeJSON(float temp, float press, float rain, std::string forecast) {
+	char* outstring;
+	newfmt(&outstring, _JSON_FORMAT_TODAY,DataStorage::giveTodayDate().c_str(), temp, press, rain, forecast.c_str());
+	//std::cout << "Statistics stored in JSON format" << '\n';
+	_statJSON.assign(outstring, strlen(outstring));
+	free(outstring); 
+}
+
+//For archive data
+void WeatherData::makeJSONArchive(std::string date,float temp, float press, float rain) {
+	char* outstring;
+	newfmt(&outstring, _JSON_FORMAT_ARCHIVE, date.c_str(), temp, press, rain);
+	//std::cout << "Statistics stored in JSON format" << '\n';
+	_statJSON.assign(outstring, strlen(outstring));
+	free(outstring);
+}
+
+std::string WeatherData::returnJSON() {
+	return _statJSON;
 }
 
 float WeatherData::getAvg(std::vector<float> vector) {
@@ -30,8 +94,9 @@ float WeatherData::getAvg(std::vector<float> vector) {
 	return res;
 }
 
-void WeatherData::simpleWeatherForecast(std::vector<float> pressures) {
+std::string WeatherData::simpleWeatherForecast(std::vector<float> pressures) {
 	float slope;
+	std::string res;
 	if (pressures.size() > 2) {
 		//Slope calculation
 		if (pressures.size() < 4) {
@@ -42,30 +107,46 @@ void WeatherData::simpleWeatherForecast(std::vector<float> pressures) {
 		}
 		//Analysis
 		if (abs(slope) < 1) {//change is negligeable
-			std::cout << "The weather is stable" << '\n';
+			res = "The weather is stable";
 		}
 		else {
 			if (slope < 0) {
-				std::cout << "Weather won't be clement" << '\n';
+				res = "Weather won't be clement";
 			}
 			else {
-				std::cout << "Weather will turn clear and sunny" << '\n';
+				res = "Weather will turn clear and sunny";
 			}
 		}
 	}
 	else {
-		std::cout << "More data is needed" << std::endl;
+		res = "More data is needed";
 	}
+	return res;
 }
 
 void WeatherData::ShowStats() {
 	//Get the statistics:
-	std::cout << "The average barometric pressure today is:" << getAvg(_arrPress) << '\n';
-	std::cout << "The average temperature today is:" << getAvg(_arrTemp) << '\n';
-	std::cout << "The average rain rate today is:" << getAvg(_arrRain) << '\n';
-	std::cout << '\n';
-	simpleWeatherForecast(_arrPress);
+	std::string stats = returnStats();
+	//Display statistics
+	//std::cout << stats << '\n';
 }
+
+std::string WeatherData::returnStats() {
+	//Calculate the statistics:
+	float meanPress = getAvg(_arrPress);
+	float meanTemp = getAvg(_arrTemp);
+	float meanRain = getAvg(_arrRain);
+	std::string forecast = simpleWeatherForecast(_arrPress);
+	std::ostringstream result;
+	result << "The average barometric pressure today is:" << meanPress << '\n';
+	result << "The average temperature today is:" << meanTemp << '\n';
+	result << "The average rain rate today is:" << meanRain << '\n';
+	result <<  forecast << '\n';
+	//Combine into a JSON string
+	makeJSON(meanTemp, meanPress, meanRain, forecast);
+	return result.str();
+}
+
 
 int WeatherData::extractData() {
 	std::ifstream fp("downloaded.html");
@@ -73,7 +154,7 @@ int WeatherData::extractData() {
 	std::string str;
 	while (std::getline(fp, str)) {
 		if (str.find(strToFind) != std::string::npos) {
-			std::cout << "Table with sensor measurements is found!" << '\n';
+			//std::cout << "Table with sensor measurements is found!" << '\n';
 			break;
 		}
 	}
@@ -82,9 +163,7 @@ int WeatherData::extractData() {
 	//tested on https://regexr.com/
 	//Define the regex to extract temperature, pressure and rain rate
 	std::regex rgxTemp("[0-9]{1,2}(\.\d)? °C");
-
 	std::regex rgxPress("[0-9]{3,4}(\\.\\d)? hPa");
-
 	std::regex rgxRain("[0-9]{1,2}(\.\d){0,1} mm/h");
 	//Calculate the number of results, depending of the current time:
 	const int nb_mm = nbHoursElapsedToday();
@@ -106,12 +185,13 @@ int WeatherData::extractData() {
 				_arrTemp.push_back(val);
 			}
 			catch (int e) {
-				std::cout << "Cannot convert to float" << std::endl;
-				std::cout << "An exception occurred. Exception Nr. " << e << '\n';
+				//std::cerr << "Cannot convert to float" << std::endl;
+				//std::cerr << "An exception occurred. Exception Nr. " << e << '\n';
 			}
 		}
 		else {
-			std::cout << "Not match was found for temperature regex" << std::endl;
+			//std::cerr << "No match was found for temperature regex" << std::endl;
+			//fprintf(stderr, "No match was found for temperature regex \n");
 		}
 
 		//Pressures
@@ -124,12 +204,13 @@ int WeatherData::extractData() {
 				_arrPress.push_back(val2);
 			}
 			catch (int e) {
-				std::cout << "Cannot convert to number" << std::endl;
-				std::cout << "An exception occurred. Exception Nr. " << e << '\n';
+				//std::cerr << "Cannot convert to number" << std::endl;
+				//std::cerr << "An exception occurred. Exception Nr. " << e << '\n';
 			}
 		}
 		else {
-			std::cout << "Not match was found for barometric pressure regex" << std::endl;
+			//std::cerr << "No match was found for barometric pressure regex" << std::endl;
+			//fprintf(stderr, "No match was found for barometric pressure regex \n");
 		}
 
 		//Rain Rate
@@ -142,12 +223,13 @@ int WeatherData::extractData() {
 				_arrRain.push_back(val3);
 			}
 			catch (int e) {
-				std::cout << "Cannot convert to float" << std::endl;
-				std::cout << "An exception occurred. Exception Nr. " << e << '\n';
+				//std::cerr << "Cannot convert to float" << std::endl;
+				//std::cerr << "An exception occurred. Exception Nr. " << e << '\n';
 			}
 		}
 		else {
-			std::cout << "Not match was found for barometric pressure regex" << std::endl;
+			//std::cerr << "No match was found for rain regex" << std::endl;
+			//fprintf(stderr, "No match was found for rain regex \n");
 		}
 		//next line
 		std::getline(fp, str);
@@ -194,12 +276,3 @@ int WeatherData::nbHoursElapsedToday(){
 	//Add 1 because it is french weather and Paris is UTC + 1
 	return hours+1;
 }
-
-
-
-
-
-
-
-
-

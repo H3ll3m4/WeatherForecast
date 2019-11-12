@@ -1,7 +1,6 @@
 #pragma once
 #include "stdafx.h"
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
-
 #include <string.h>
 #include <winsock2.h>
 #include <windows.h>
@@ -10,9 +9,8 @@
 #include <locale>
 #include <sstream>
 #include <WS2tcpip.h>
-
+#pragma comment(lib, "Ws2_32.lib")
 using std::string;
-
 class GetWebData {
 	public:
 		static int downloadHTML();

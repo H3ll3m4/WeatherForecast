@@ -14,19 +14,15 @@ int GetWebData::downloadHTML()
 	long fileSize;
 	char *memBuffer, *headerBuffer;
 	FILE *fp;
-
 	memBuffer = headerBuffer = NULL;
-
 	if (WSAStartup(0x101, &wsaData) != 0)
 		return -1;
-
-
 	memBuffer = readUrl2(szUrl, fileSize, &headerBuffer);
 	//printf("returned from readUrl\n");
 	//printf("data returned:\n%s", memBuffer);
 	if (fileSize != 0)
 	{
-		printf("Got some data\n");
+		//printf("Got some data\n");
 		fp = fopen("downloaded.html", "wb");
 		//fp = fopen_s("downloaded.html", "wb");
 		fwrite(memBuffer, 1, fileSize, fp);
@@ -34,7 +30,6 @@ int GetWebData::downloadHTML()
 		delete(memBuffer);
 		delete(headerBuffer);
 	}
-
 	WSACleanup();
 	return 0;
 }
@@ -55,27 +50,23 @@ int socketCreation() {
 	sin.sin_port = htons(6667);
 	if (connect(sock, (SOCKADDR *)&sin, sizeof(sin)) != 0)
 	{
-		cout << "Could not connect";
+		//cout << "Could not connect";
 		system("pause");
 		return 1;
 	}
-
 	string get_http = "GET / HTTP/1.1\r\nHost: " + url + "\r\nConnection: close\r\n\r\n";
 	if (send(sock, get_http.c_str(), strlen(get_http.c_str()), 0) > 0) {
-		cout << "Could not send anything";
+		//cout << "Could not send anything";
 		system("pause");
 		return 1;
 	}
-
 	if (recv(sock, buffer, sizeof(buffer), 0) < 0)
 	{
-		cout << "Could not receive anything";
+		//cout << "Could not receive anything";
 		system("pause");
 		return 1;
 	}
-
-	cout << "We received:" << buffer << endl;
-
+	//cout << "We received:" << buffer << endl;
 	closesocket(sock);
 	WSACleanup();
 	return 0;
@@ -86,13 +77,11 @@ void GetWebData::mParseUrl(char *mUrl, string &serverName, string &filepath, str
 {
 	string::size_type n;
 	string url = mUrl;
-
 	if (url.substr(0, 7) == "http://")
 		url.erase(0, 7);
 
 	if (url.substr(0, 8) == "https://")
 		url.erase(0, 8);
-
 	n = url.find('/');
 	if (n != string::npos)
 	{
@@ -101,7 +90,6 @@ void GetWebData::mParseUrl(char *mUrl, string &serverName, string &filepath, str
 		n = filepath.rfind('/');
 		filename = filepath.substr(n + 1);
 	}
-
 	else
 	{
 		serverName = url;
@@ -116,7 +104,6 @@ SOCKET GetWebData::connectToServer(char *szServerName, WORD portNum)
 	unsigned int addr;
 	struct sockaddr_in server;
 	SOCKET conn;
-
 	conn = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (conn == INVALID_SOCKET)
 		return NULL;
@@ -130,13 +117,11 @@ SOCKET GetWebData::connectToServer(char *szServerName, WORD portNum)
 		addr = inet_addr(szServerName);
 		hp = gethostbyaddr((char*)&addr, sizeof(addr), AF_INET);
 	}
-
 	if (hp == NULL)
 	{
 		closesocket(conn);
 		return NULL;
 	}
-
 	server.sin_addr.s_addr = *((unsigned long*)hp->h_addr);
 	server.sin_family = AF_INET;
 	server.sin_port = htons(portNum);
@@ -153,14 +138,12 @@ int GetWebData::getHeaderLength(char *content)
 	const char *srchStr1 = "\r\n\r\n", *srchStr2 = "\n\r\n\r";
 	char *findPos;
 	int ofset = -1;
-
 	findPos = strstr(content, srchStr1);
 	if (findPos != NULL)
 	{
 		ofset = findPos - content;
 		ofset += strlen(srchStr1);
 	}
-
 	else
 	{
 		findPos = strstr(content, srchStr2);

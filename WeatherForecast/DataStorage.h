@@ -2,9 +2,9 @@
 //https://cppcodetips.wordpress.com/tag/including-sqlite-with-visual-studio/
 //#include <sqlite3.h> 
 //https://stackoverflow.com/questions/50395965/how-do-i-connect-to-an-sqlite-database-in-c-using-visual-studio-2017-on-window
-#include "sqlite3.h""
+#include "sqlite3.h"
 // => had to turn off pre compiled headers: https://stackoverflow.com/questions/20113280/fatal-error-c1010-stdafx-h-in-visual-studio-how-can-this-be-corrected
-#include <stdio.h>
+
 #include <stdlib.h>
 #include <iostream>
 #include <string>
@@ -38,6 +38,8 @@ public:
 	float getAvg(std::string type, std::string date);
 	void showStatistics();
 	int SelectThisYear();
+	static std::string giveTodayDate();
+	static bool FileExists(const std::string &Filename);
 
 private:
 	const char* _db_name;
